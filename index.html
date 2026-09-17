@@ -344,9 +344,9 @@
         <td>${p.delivery || ''}</td>
         <td>${p.po_no || ''}</td>
         <td style="white-space:nowrap;">
-          <button class="btn-pdf" onclick="exportSinglePDF('${p.id}')" title="Export PDF">Close</button>
-          <button class="btn-edit" onclick="openEditModal('${p.id}')" title="Edit">Edit</button>
-          <button class="btn-delete" onclick="deletePart('${p.id}')" title="Delete">Delete</button>
+          <button class="btn-pdf" onclick="exportSinglePDF('${p.id}')" title="Export PDF">⭕</button>
+          <button class="btn-edit" onclick="openEditModal('${p.id}')" title="Edit">➖</button>
+          <button class="btn-delete" onclick="deletePart('${p.id}')" title="Delete">❌</button>
         </td>
       </tr>`).join('');
   }
