@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile - Style Wise Part</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="js/supabase-config.js"></script>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeSidebarMobile()"></div>
+<button class="toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+
+<aside class="sidebar" id="sidebar">
+  <h2>STYLE WISE <span>PART</span></h2>
+  <nav>
+    <a href="index.html">📊 Dashboard</a>
+    <a href="profile.html" class="active">👤 Profile</a>
+    <a href="messages.html">💬 Messages <span class="badge" id="msgBadge"></span></a>
+    <a href="notifications.html">🔔 Notifications <span class="badge" id="notifBadge"></span></a>
+  </nav>
+  <div class="user-info">
+    <div>👤 <span id="userEmail">—</span></div>
+    <button onclick="logout()">Log out</button>
+  </div>
+</aside>
+
+<main class="main-content" id="mainContent">
+  <div class="topbar"><h1>My Profile</h1></div>
+
+  <div class="profile-header">
+    <div class="avatar-wrap">
+      <img id="avatarImg" class="avatar" src="https://via.placeholder.com/100/2a2b30/8e8f96?text=%20" alt="Avatar">
+      <label class="avatar-edit" for="avatarInput">📷</label>
+      <input type="file" id="avatarInput" accept="image/*" style="display:none;">
+    </div>
+    <div class="profile-info">
+      <h2 id="profileName">—</h2>
+      <p id="profileEmail">—</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Edit Profile</h2>
+    <div class="form-grid">
+      <input id="editName" placeholder="Full name">
+      <input id="editEmail" placeholder="Email" disabled>
+    </div>
+    <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+    <div id="profileMsg" style="margin-top:12px; font-size:14px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Change Password</h2>
+    <div class="form-grid">
+      <input type="password" id="newPassword" placeholder="New password (min 6 chars)">
+    </div>
+    <button class="btn-primary" onclick="changePassword()">Update Password</button>
+    <div id="passMsg" style="margin-top:12px; font-size:14px;"></div>
+  </div>
+</main>
+
+<script src="js/auth-guard.js"></script>
+<script>
+  window.addEventListener('userLoaded', () => {
+    document.getElementById('profileName').textContent = userProfile?.full_name || currentUser.email;
+    document.getElementById('profileEmail').textContent = userProfile?.email || currentUser.email;
+    document.getElementById('editName').value = userProfile?.full_name || '';
+    document.getElementById('editEmail').value = userProfile?.email || currentUser.email;
+    if (userProfile?.avatar_url) document.getElementById('avatarImg').src = userProfile.avatar_url;
+  });
+
+  document.getElementById('avatarInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB'); return; }
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `${currentUser.id}/${fileName}`;
+
+    const { error: uploadErr } = await supabaseClient.storage
+      .from('avatars').upload(filePath, file, { upsert: true });
+
+    if (uploadErr) { alert('Upload failed: ' + uploadErr.message); return; }
+
+    const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(filePath);
+
+    const { error: updateErr } = await supabaseClient
+      .from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', currentUser.id);
+
+    if (updateErr) { alert('Profile update failed: ' + updateErr.message); return; }
+
+    document.getElementById('avatarImg').src = urlData.publicUrl;
+    alert('✅ Profile picture updated!');
+  });
+
+  async function saveProfile() {
+    const name = document.getElementById('editName').value.trim();
+    const msg = document.getElementById('profileMsg');
+    if (!name) { msg.style.color = '#ff6b6b'; msg.textContent = 'Name cannot be empty.'; return; }
+
+    const { error } = await supabaseClient
+      .from('profiles').update({ full_name: name, updated_at: new Date() }).eq('id', currentUser.id);
+
+    if (error) { msg.style.color = '#ff6b6b'; msg.textContent = error.message; return; }
+    msg.style.color = '#4ade80'; msg.textContent = '✅ Profile updated!';
+    document.getElementById('profileName').textContent = name;
+    document.getElementById('userEmail').textContent = name;
+  }
+
+  async function changePassword() {
+    const pwd = document.getElementById('newPassword').value;
+    const msg = document.getElementById('passMsg');
+    if (pwd.length < 6) { msg.style.color = '#ff6b6b'; msg.textContent = 'Password must be at least 6 characters.'; return; }
+
+    const { error } = await supabaseClient.auth.updateUser({ password: pwd });
+    if (error) { msg.style.color = '#ff6b6b'; msg.textContent = error.message; return; }
+    msg.style.color = '#4ade80'; msg.textContent = '✅ Password updated!';
+    document.getElementById('newPassword').value = '';
+  }
+</script>
+</body>
+</html>
