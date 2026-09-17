@@ -26,20 +26,16 @@
     border: 1px solid #ddd; border-radius: 10px; font-size: 15px; transition: 0.2s;
   }
   .login-box input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.15); }
-  .login-box > div > button, .login-box button.main-btn {
+  .main-btn {
     width: 100%; padding: 13px; background: linear-gradient(135deg, #667eea, #764ba2);
     color: #fff; border: none; border-radius: 10px; font-size: 16px;
     font-weight: 600; cursor: pointer; transition: 0.2s;
   }
-  .login-box button.main-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .main-btn:hover { opacity: 0.9; transform: translateY(-1px); }
   .error-msg { color: #e74c3c; font-size: 14px; text-align: center; margin-top: 10px; }
   .success-msg { color: #2ecc71; font-size: 14px; text-align: center; margin-top: 10px; }
 
-  /* ট্যাব */
-  .tabs {
-    display: flex; margin-bottom: 20px;
-    background: #f5f5f5; border-radius: 10px; padding: 4px;
-  }
+  .tabs { display: flex; margin-bottom: 20px; background: #f5f5f5; border-radius: 10px; padding: 4px; }
   .tab {
     flex: 1; padding: 10px; border: none; background: transparent;
     color: #888; font-size: 15px; font-weight: 600;
@@ -47,7 +43,6 @@
   }
   .tab.active { background: #fff; color: #667eea; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
 
-  /* Google বাটন */
   .google-btn {
     width: 100%; padding: 12px; background: #fff; color: #333;
     border: 1px solid #ddd; border-radius: 10px; font-size: 15px;
@@ -57,7 +52,6 @@
   }
   .google-btn:hover { background: #f5f5f5; border-color: #bbb; }
 
-  /* ডিভাইডার */
   .divider { text-align: center; margin: 16px 0; position: relative; }
   .divider::before {
     content: ''; position: absolute; top: 50%; left: 0;
@@ -159,13 +153,11 @@
     <h1>🏭 Part Entry ERP</h1>
     <p id="formSubtitle">সিস্টেমে প্রবেশ করতে লগইন করুন</p>
 
-    <!-- ট্যাব -->
     <div class="tabs">
       <button class="tab active" id="tabLogin" onclick="switchTab('login')">লগইন</button>
       <button class="tab" id="tabSignup" onclick="switchTab('signup')">সাইন আপ</button>
     </div>
 
-    <!-- Google বাটন -->
     <button class="google-btn" onclick="loginWithGoogle()">
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
       Google দিয়ে চালিয়ে যান
@@ -173,14 +165,12 @@
 
     <div class="divider"><span>অথবা</span></div>
 
-    <!-- লগইন ফর্ম -->
     <div id="loginForm">
       <input type="email" id="loginEmail" placeholder="ইমেইল ঠিকানা">
       <input type="password" id="loginPassword" placeholder="পাসওয়ার্ড">
       <button class="main-btn" onclick="login()">লগইন করুন</button>
     </div>
 
-    <!-- সাইনআপ ফর্ম -->
     <div id="signupForm" style="display:none;">
       <input type="text" id="signupName" placeholder="আপনার নাম">
       <input type="email" id="signupEmail" placeholder="ইমেইল ঠিকানা">
@@ -210,7 +200,6 @@
   </aside>
 
   <main class="main-content">
-    <!-- ড্যাশবোর্ড সেকশন -->
     <div id="section-dashboard">
       <div class="topbar">
         <h1>ড্যাশবোর্ড</h1>
@@ -231,7 +220,6 @@
       </div>
     </div>
 
-    <!-- নতুন এন্ট্রি -->
     <div id="section-entry" style="display:none;">
       <div class="topbar"><h1>নতুন পার্ট এন্ট্রি</h1></div>
       <div class="card">
@@ -249,7 +237,6 @@
       </div>
     </div>
 
-    <!-- পার্ট লিস্ট -->
     <div id="section-list" style="display:none;">
       <div class="topbar"><h1>পার্ট লিস্ট</h1></div>
       <div class="card">
@@ -272,7 +259,9 @@
   // ===== আপনার Supabase তথ্য =====
   const SUPABASE_URL = 'https://upcmspspqlwlawncvyre.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_5FWg_CBzx3vjscLkjP4BGg_42lV4vMv';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ⚠️ নাম দ্বন্দ্ব এড়াতে 'supabaseClient' ব্যবহার করা হয়েছে
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let allParts = [];
   let currentUser = null;
@@ -301,7 +290,7 @@
 
     if (!email || !password) { err.textContent = 'ইমেইল ও পাসওয়ার্ড দিন!'; return; }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) { err.textContent = 'লগইন ব্যর্থ: ' + error.message; return; }
 
     currentUser = data.user;
@@ -322,7 +311,7 @@
     if (password.length < 6) { err.textContent = 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে!'; return; }
     if (password !== confirm) { err.textContent = 'দুটি পাসওয়ার্ড মিলছে না!'; return; }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabaseClient.auth.signUp({
       email, password,
       options: { data: { full_name: name } }
     });
@@ -340,7 +329,7 @@
 
   // ===== Google লগইন =====
   async function loginWithGoogle() {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin + window.location.pathname }
     });
@@ -351,13 +340,13 @@
 
   // ===== লগআউট =====
   async function logout() {
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     currentUser = null;
     document.getElementById('dashboardPage').style.display = 'none';
     document.getElementById('loginPage').style.display = 'flex';
   }
 
-  // ===== ড্যাশবোর্ড দেখানো =====
+  // ===== ড্যাশবোর্ড =====
   function showDashboard() {
     document.getElementById('loginPage').style.display = 'none';
     document.getElementById('dashboardPage').style.display = 'block';
@@ -368,9 +357,8 @@
     loadParts();
   }
 
-  // ===== ডেটা লোড =====
   async function loadParts() {
-    const { data, error } = await supabase.from('parts').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabaseClient.from('parts').select('*').order('created_at', { ascending: false });
     if (error) { console.error(error); return; }
     allParts = data;
     updateStats();
@@ -423,7 +411,6 @@
       </tr>`).join('');
   }
 
-  // ===== নতুন এন্ট্রি =====
   async function savePart() {
     const part = {
       buyer: document.getElementById('fBuyer').value.trim(),
@@ -438,7 +425,7 @@
 
     if (!part.buyer || !part.style) { alert('Buyer এবং Style অবশ্যই দিতে হবে!'); return; }
 
-    const { error } = await supabase.from('parts').insert(part);
+    const { error } = await supabaseClient.from('parts').insert(part);
     if (error) { alert('সেভ করা যায়নি: ' + error.message); return; }
 
     ['fBuyer','fStyle','fQty','fColor','fEmbroidery','fDelivery','fPo']
@@ -451,12 +438,11 @@
 
   async function deletePart(id) {
     if (!confirm('আপনি কি নিশ্চিত এই এন্ট্রি মুছে ফেলতে চান?')) return;
-    const { error } = await supabase.from('parts').delete().eq('id', id);
+    const { error } = await supabaseClient.from('parts').delete().eq('id', id);
     if (error) { alert('মুছা যায়নি: ' + error.message); return; }
     loadParts();
   }
 
-  // ===== সেকশন পরিবর্তন =====
   function showSection(name) {
     ['dashboard','entry','list'].forEach(s => {
       document.getElementById('section-' + s).style.display = (s === name) ? 'block' : 'none';
@@ -468,11 +454,10 @@
 
   // ===== সেশন চেক =====
   (async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) { currentUser = session.user; showDashboard(); }
   })();
 
-  // Enter চাপলে লগইন
   document.getElementById('loginPassword').addEventListener('keypress', e => {
     if (e.key === 'Enter') login();
   });
