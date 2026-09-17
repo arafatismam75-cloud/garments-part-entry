@@ -6,6 +6,8 @@
 <title>Dashboard - Style Wise Part</title>
 <link rel="stylesheet" href="css/style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="js/supabase-config.js"></script>
 </head>
 <body>
@@ -25,35 +27,28 @@
         <input type="text" id="signupName" placeholder="Full name" autocomplete="name"
           style="width:100%; padding:15px 20px; border-radius:28px; border:1px solid #2a2b30; background:transparent; color:#fff; font-size:15px; outline:none;">
       </div>
-
       <div style="position:relative; width:100%; margin-bottom:14px;">
         <input type="email" id="email" placeholder="Email address" autocomplete="email" required
           style="width:100%; padding:15px 20px; border-radius:28px; border:1px solid #2a2b30; background:transparent; color:#fff; font-size:15px; outline:none;">
       </div>
-
       <div style="position:relative; width:100%; margin-bottom:14px;">
         <input type="password" id="password" placeholder="Password" autocomplete="current-password" required
           style="width:100%; padding:15px 20px; border-radius:28px; border:1px solid #2a2b30; background:transparent; color:#fff; font-size:15px; outline:none;">
       </div>
-
       <div id="confirmBox" style="position:relative; width:100%; margin-bottom:14px; display:none;">
         <input type="password" id="signupConfirm" placeholder="Confirm password"
           style="width:100%; padding:15px 20px; border-radius:28px; border:1px solid #2a2b30; background:transparent; color:#fff; font-size:15px; outline:none;">
       </div>
-
       <div style="font-size:13px; color:#9e9ea4; margin:20px 0; line-height:1.5;">
         By signing up or logging in, you consent to GMS Textiles's
         <a href="#" style="color:#fff; text-decoration:underline;">Terms of Use</a> and
         <a href="#" style="color:#fff; text-decoration:underline;">Privacy Policy</a>.
       </div>
-
       <div id="message" style="width:100%; min-height:20px; margin-bottom:12px; text-align:center; font-size:14px; color:#ff6b6b;"></div>
-
       <div style="width:100%; display:flex; justify-content:space-between; align-items:center; font-size:14px; margin-bottom:20px;">
         <button type="button" id="forgotPassword" style="color:#4d8aea; background:none; border:none; cursor:pointer; font-size:14px; padding:0;">Forgot password?</button>
         <button type="button" id="toggleAuthMode" style="color:#4d8aea; background:none; border:none; cursor:pointer; font-size:14px; padding:0;">Sign up</button>
       </div>
-
       <button type="submit" id="submitBtn" style="width:100%; padding:14px; border-radius:28px; border:none; background:#4d8aea; color:#fff; font-size:16px; font-weight:500; cursor:pointer; margin-bottom:20px;">Log in</button>
     </form>
 
@@ -128,7 +123,10 @@
 
     <!-- Part List Section -->
     <div id="section-list" style="display:none;">
-      <div class="topbar"><h1>Part List</h1></div>
+      <div class="topbar">
+        <h1>Part List</h1>
+        <button class="btn-primary" onclick="exportPDF()" style="margin:0; padding:10px 22px; font-size:14px;">📄 Export All as PDF</button>
+      </div>
       <div class="card">
         <div class="search-bar">
           <input id="searchInput" placeholder="🔍 Search by Buyer, Style, or PO No..." oninput="renderParts()">
@@ -145,13 +143,34 @@
   </main>
 </div>
 
+<!-- ===== EDIT MODAL ===== -->
+<div id="editModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:300; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#1a1b1f; border:1px solid #2a2b30; border-radius:14px; padding:30px; width:100%; max-width:600px; max-height:90vh; overflow-y:auto;">
+    <h2 style="color:#fff; font-size:20px; margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid #2a2b30;">Edit Part Entry</h2>
+    <div class="form-grid">
+      <input id="eBuyer" placeholder="Buyer">
+      <input id="eStyle" placeholder="Style">
+      <input id="eQty" type="number" placeholder="Qty">
+      <input id="eColor" placeholder="Color">
+      <input id="eEmbroidery" placeholder="Embroidery">
+      <input id="eDelivery" type="date">
+      <input id="ePo" placeholder="PO No">
+    </div>
+    <div style="display:flex; gap:12px; margin-top:22px;">
+      <button class="btn-primary" onclick="updatePart()" style="margin:0; flex:1;">💾 Save Changes</button>
+      <button onclick="closeEditModal()" style="padding:12px 28px; background:#2a2b30; color:#fff; border:none; border-radius:28px; cursor:pointer; font-size:15px; font-weight:600; flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
   let allParts = [];
   let currentUser = null;
   let userProfile = null;
   let isSignupMode = false;
+  let editingId = null;
 
-  // ===== Login / Signup Logic =====
+  // ===== Login / Signup =====
   document.getElementById('toggleAuthMode').addEventListener('click', () => {
     isSignupMode = !isSignupMode;
     document.getElementById('nameBox').style.display = isSignupMode ? 'block' : 'none';
@@ -159,7 +178,6 @@
     document.getElementById('submitBtn').textContent = isSignupMode ? 'Sign up' : 'Log in';
     document.getElementById('toggleAuthMode').textContent = isSignupMode ? 'Log in' : 'Sign up';
     document.getElementById('message').textContent = '';
-    document.getElementById('message').style.color = '#ff6b6b';
   });
 
   document.getElementById('authForm').addEventListener('submit', async (e) => {
@@ -168,7 +186,6 @@
     const password = document.getElementById('password').value;
     const msg = document.getElementById('message');
     msg.style.color = '#ff6b6b'; msg.textContent = '';
-
     if (!email || !password) { msg.textContent = 'Please fill all fields.'; return; }
 
     if (isSignupMode) {
@@ -239,20 +256,15 @@
     toggleBtn.style.display = 'flex';
     if (window.innerWidth > 768) toggleBtn.classList.add('shifted');
 
-    // প্রোফাইল লোড
     let { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('id', currentUser.id)
-      .single();
+      .from('profiles').select('*').eq('id', currentUser.id).single();
 
     if (!profile) {
       const name = currentUser.user_metadata?.full_name || currentUser.email;
       const { data: newProfile } = await supabaseClient
         .from('profiles')
         .insert({ id: currentUser.id, full_name: name, email: currentUser.email })
-        .select()
-        .single();
+        .select().single();
       profile = newProfile;
     }
     userProfile = profile;
@@ -265,42 +277,25 @@
     loadUnreadBadges();
   }
 
-  // ===== Unread Badges =====
   async function loadUnreadBadges() {
     if (!currentUser) return;
-
-    const { count: unreadMsgs } = await supabaseClient
-      .from('messages')
+    const { count: unreadMsgs } = await supabaseClient.from('messages')
       .select('*', { count: 'exact', head: true })
-      .eq('receiver_id', currentUser.id)
-      .eq('is_read', false);
-
-    const { count: unreadNotifs } = await supabaseClient
-      .from('notifications')
+      .eq('receiver_id', currentUser.id).eq('is_read', false);
+    const { count: unreadNotifs } = await supabaseClient.from('notifications')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', currentUser.id)
-      .eq('is_read', false);
+      .eq('user_id', currentUser.id).eq('is_read', false);
 
     const msgBadge = document.getElementById('msgBadge');
-    if (msgBadge) {
-      msgBadge.textContent = unreadMsgs || 0;
-      msgBadge.style.display = (unreadMsgs > 0) ? 'inline-block' : 'none';
-    }
-
+    if (msgBadge) { msgBadge.textContent = unreadMsgs || 0; msgBadge.style.display = (unreadMsgs > 0) ? 'inline-block' : 'none'; }
     const notifBadge = document.getElementById('notifBadge');
-    if (notifBadge) {
-      notifBadge.textContent = unreadNotifs || 0;
-      notifBadge.style.display = (unreadNotifs > 0) ? 'inline-block' : 'none';
-    }
+    if (notifBadge) { notifBadge.textContent = unreadNotifs || 0; notifBadge.style.display = (unreadNotifs > 0) ? 'inline-block' : 'none'; }
   }
 
   // ===== Load Parts =====
   async function loadParts() {
     const { data, error } = await supabaseClient
-      .from('parts')
-      .select('*')
-      .order('created_at', { ascending: false });
-
+      .from('parts').select('*').order('created_at', { ascending: false });
     if (error) { console.error(error); return; }
     allParts = data || [];
     updateStats();
@@ -311,44 +306,52 @@
     document.getElementById('statTotal').textContent = allParts.length;
     document.getElementById('statQty').textContent = allParts.reduce((s, p) => s + (Number(p.qty) || 0), 0);
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('statToday').textContent =
-      allParts.filter(p => p.created_at?.startsWith(today)).length;
-    document.getElementById('statBuyers').textContent =
-      new Set(allParts.map(p => p.buyer).filter(Boolean)).size;
+    document.getElementById('statToday').textContent = allParts.filter(p => p.created_at?.startsWith(today)).length;
+    document.getElementById('statBuyers').textContent = new Set(allParts.map(p => p.buyer).filter(Boolean)).size;
 
     const recent = allParts.slice(0, 5);
     const tbody = document.getElementById('recentBody');
-    if (recent.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty">No data available</td></tr>'; return;
-    }
+    if (recent.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No data available</td></tr>'; return; }
     tbody.innerHTML = recent.map(p => `
-      <tr>
-        <td>${p.buyer || ''}</td><td>${p.style || ''}</td>
-        <td>${p.qty || ''}</td><td>${p.color || ''}</td>
-        <td>${p.delivery || '—'}</td>
-      </tr>`).join('');
+      <tr><td>${p.buyer || ''}</td><td>${p.style || ''}</td>
+      <td>${p.qty || ''}</td><td>${p.color || ''}</td>
+      <td>${p.delivery || '—'}</td></tr>`).join('');
   }
 
-  function renderParts() {
+  function getFilteredParts() {
     const q = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = allParts.filter(p =>
+    return allParts.filter(p =>
       (p.buyer || '').toLowerCase().includes(q) ||
       (p.style || '').toLowerCase().includes(q) ||
       (p.po_no || '').toLowerCase().includes(q)
     );
+  }
+
+  // ===== Render Parts with 3 colored buttons =====
+  function renderParts() {
+    const filtered = getFilteredParts();
     const tbody = document.getElementById('partsBody');
     if (filtered.length === 0) {
       tbody.innerHTML = '<tr><td colspan="8" class="empty">No data available</td></tr>'; return;
     }
     tbody.innerHTML = filtered.map(p => `
       <tr>
-        <td>${p.buyer || ''}</td><td>${p.style || ''}</td><td>${p.qty || ''}</td>
-        <td>${p.color || ''}</td><td>${p.embroidery || ''}</td>
-        <td>${p.delivery || ''}</td><td>${p.po_no || ''}</td>
-        <td><button class="btn-danger" onclick="deletePart('${p.id}')">Delete</button></td>
+        <td>${p.buyer || ''}</td>
+        <td>${p.style || ''}</td>
+        <td>${p.qty || ''}</td>
+        <td>${p.color || ''}</td>
+        <td>${p.embroidery || ''}</td>
+        <td>${p.delivery || ''}</td>
+        <td>${p.po_no || ''}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn-pdf" onclick="exportSinglePDF('${p.id}')" title="Export PDF">📄</button>
+          <button class="btn-edit" onclick="openEditModal('${p.id}')" title="Edit">✏️</button>
+          <button class="btn-delete" onclick="deletePart('${p.id}')" title="Delete">🗑️</button>
+        </td>
       </tr>`).join('');
   }
 
+  // ===== Save Part =====
   async function savePart() {
     const part = {
       buyer: document.getElementById('fBuyer').value.trim(),
@@ -363,13 +366,52 @@
     if (!part.buyer || !part.style) { alert('Buyer and Style are required!'); return; }
     const { error } = await supabaseClient.from('parts').insert(part);
     if (error) { alert('Save failed: ' + error.message); return; }
-    ['fBuyer','fStyle','fQty','fColor','fEmbroidery','fDelivery','fPo']
-      .forEach(id => document.getElementById(id).value = '');
+    ['fBuyer','fStyle','fQty','fColor','fEmbroidery','fDelivery','fPo'].forEach(id => document.getElementById(id).value = '');
     alert('✅ Entry saved successfully!');
     loadParts();
     showSection('list');
   }
 
+  // ===== Edit =====
+  function openEditModal(id) {
+    const part = allParts.find(p => p.id === id);
+    if (!part) return;
+    editingId = id;
+    document.getElementById('eBuyer').value = part.buyer || '';
+    document.getElementById('eStyle').value = part.style || '';
+    document.getElementById('eQty').value = part.qty || '';
+    document.getElementById('eColor').value = part.color || '';
+    document.getElementById('eEmbroidery').value = part.embroidery || '';
+    document.getElementById('eDelivery').value = part.delivery || '';
+    document.getElementById('ePo').value = part.po_no || '';
+    document.getElementById('editModal').style.display = 'flex';
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    editingId = null;
+  }
+
+  async function updatePart() {
+    if (!editingId) return;
+    const updates = {
+      buyer: document.getElementById('eBuyer').value.trim(),
+      style: document.getElementById('eStyle').value.trim(),
+      qty: parseInt(document.getElementById('eQty').value) || 0,
+      color: document.getElementById('eColor').value.trim(),
+      embroidery: document.getElementById('eEmbroidery').value.trim(),
+      delivery: document.getElementById('eDelivery').value || null,
+      po_no: document.getElementById('ePo').value.trim()
+    };
+    if (!updates.buyer || !updates.style) { alert('Buyer and Style are required!'); return; }
+    const { error } = await supabaseClient.from('parts').update(updates).eq('id', editingId);
+    if (error) { alert('Update failed: ' + error.message); return; }
+    alert('✅ Entry updated!');
+    closeEditModal();
+    loadParts();
+  }
+
+  // ===== Delete =====
   async function deletePart(id) {
     if (!confirm('Are you sure you want to delete this entry?')) return;
     const { error } = await supabaseClient.from('parts').delete().eq('id', id);
@@ -377,16 +419,101 @@
     loadParts();
   }
 
+  // ===== Export All PDF =====
+  function exportPDF() {
+    const filtered = getFilteredParts();
+    if (filtered.length === 0) { alert('No data to export.'); return; }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape' });
+
+    doc.setFontSize(18);
+    doc.setTextColor(77, 138, 234);
+    doc.text('STYLE WISE PART - Part List', 14, 20);
+
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.text('Generated: ' + new Date().toLocaleString('en-US'), 14, 27);
+    doc.text('Total Records: ' + filtered.length, 14, 32);
+
+    const rows = filtered.map(p => [
+      p.buyer || '', p.style || '', p.qty || '',
+      p.color || '', p.embroidery || '',
+      p.delivery || '', p.po_no || ''
+    ]);
+
+    doc.autoTable({
+      head: [['Buyer', 'Style', 'Qty', 'Color', 'Embroidery', 'Delivery', 'PO No']],
+      body: rows,
+      startY: 38,
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [77, 138, 234], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 245] }
+    });
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(9);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Page ' + i + ' of ' + pageCount, 14, doc.internal.pageSize.height - 10);
+    }
+
+    doc.save('part-list-' + new Date().toISOString().split('T')[0] + '.pdf');
+  }
+
+  // ===== Export Single Row PDF =====
+  function exportSinglePDF(id) {
+    const p = allParts.find(x => x.id === id);
+    if (!p) { alert('Entry not found.'); return; }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.setTextColor(77, 138, 234);
+    doc.text('STYLE WISE PART', 14, 20);
+
+    doc.setFontSize(12);
+    doc.setTextColor(50, 50, 50);
+    doc.text('Part Entry Details', 14, 28);
+
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.text('Generated: ' + new Date().toLocaleString('en-US'), 14, 35);
+
+    doc.autoTable({
+      head: [['Field', 'Value']],
+      body: [
+        ['Buyer',       p.buyer || '—'],
+        ['Style',       p.style || '—'],
+        ['Qty',         p.qty || '—'],
+        ['Color',       p.color || '—'],
+        ['Embroidery',  p.embroidery || '—'],
+        ['Delivery',    p.delivery || '—'],
+        ['PO No',       p.po_no || '—'],
+        ['Created At',  p.created_at ? new Date(p.created_at).toLocaleString('en-US') : '—']
+      ],
+      startY: 42,
+      styles: { fontSize: 11, cellPadding: 5 },
+      headStyles: { fillColor: [77, 138, 234], textColor: 255, fontStyle: 'bold' },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 50 },
+        1: { cellWidth: 'auto' }
+      }
+    });
+
+    doc.save(`part-${p.style || p.id}-${new Date().toISOString().split('T')[0]}.pdf`);
+  }
+
+  // ===== Sections =====
   function showSection(name) {
     ['dashboard','entry','list'].forEach(s => {
       document.getElementById('section-' + s).style.display = (s === name) ? 'block' : 'none';
     });
     document.querySelectorAll('.sidebar nav a').forEach(a => {
-      if (a.dataset.section) {
-        a.classList.toggle('active', a.dataset.section === name);
-      } else {
-        a.classList.remove('active');
-      }
+      if (a.dataset.section) a.classList.toggle('active', a.dataset.section === name);
+      else a.classList.remove('active');
     });
     if (window.innerWidth <= 768) closeSidebarMobile();
   }
@@ -397,7 +524,6 @@
     const main = document.getElementById('mainContent');
     const btn = document.getElementById('sidebarToggle');
     const overlay = document.getElementById('overlay');
-
     if (window.innerWidth <= 768) {
       sidebar.classList.toggle('open');
       overlay.classList.toggle('active');
@@ -419,12 +545,9 @@
     const btn = document.getElementById('sidebarToggle');
     const overlay = document.getElementById('overlay');
     if (window.innerWidth <= 768) {
-      sidebar.classList.remove('hidden');
-      main.classList.remove('full');
-      btn.classList.remove('shifted');
+      sidebar.classList.remove('hidden'); main.classList.remove('full'); btn.classList.remove('shifted');
     } else {
-      sidebar.classList.remove('open');
-      overlay.classList.remove('active');
+      sidebar.classList.remove('open'); overlay.classList.remove('active');
     }
   });
 
@@ -434,7 +557,6 @@
     if (session) { currentUser = session.user; showDashboard(); }
   })();
 
-  // ===== Password Enter =====
   document.getElementById('password').addEventListener('keypress', e => {
     if (e.key === 'Enter') document.getElementById('authForm').dispatchEvent(new Event('submit'));
   });
