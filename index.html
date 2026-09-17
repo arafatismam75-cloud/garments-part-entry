@@ -77,11 +77,45 @@
   /* ===== DASHBOARD ===== */
   #dashboardPage { display: none; min-height: 100vh; background: #121316; }
 
+  /* Sidebar */
   .sidebar {
     position: fixed; left: 0; top: 0; width: 240px; height: 100vh;
-    background: #1a1b1f; color: #fff; padding: 25px 0; z-index: 10;
+    background: #1a1b1f; color: #fff; padding: 25px 0; z-index: 100;
     border-right: 1px solid #2a2b30;
+    transition: transform 0.3s ease;
   }
+  .sidebar.hidden { transform: translateX(-100%); }
+
+  /* Hamburger Toggle Button */
+  .toggle-btn {
+    position: fixed; top: 20px; left: 20px; z-index: 200;
+    width: 42px; height: 42px; border-radius: 10px;
+    background: #1a1b1f; border: 1px solid #2a2b30;
+    color: #4d8aea; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; transition: all 0.2s;
+  }
+  .toggle-btn:hover { background: #232429; color: #fff; }
+  .toggle-btn.shifted { left: 258px; }
+
+  /* Main Content */
+  .main-content {
+    margin-left: 240px;
+    padding: 30px;
+    padding-top: 80px;
+    transition: margin-left 0.3s ease;
+  }
+  .main-content.full { margin-left: 0; }
+
+  /* Overlay (mobile) */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 50;
+  }
+  .overlay.active { display: block; }
+
+  /* Sidebar Content */
   .sidebar h2 {
     padding: 0 25px 25px; font-size: 18px;
     border-bottom: 1px solid #2a2b30; color: #4d8aea;
@@ -104,7 +138,7 @@
     border-radius: 20px; cursor: pointer; font-size: 13px;
   }
 
-  .main-content { margin-left: 240px; padding: 30px; }
+  /* Topbar */
   .topbar {
     display: flex; justify-content: space-between;
     align-items: center; margin-bottom: 30px;
@@ -112,6 +146,7 @@
   .topbar h1 { font-size: 24px; color: #fff; }
   .topbar .date { color: #8e8f96; font-size: 14px; }
 
+  /* Stats */
   .stats {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 20px; margin-bottom: 30px;
@@ -129,6 +164,7 @@
   }
   .stat-card .value { font-size: 30px; font-weight: 700; color: #fff; }
 
+  /* Card */
   .card {
     background: #1a1b1f; padding: 25px; border-radius: 12px;
     border: 1px solid #2a2b30; margin-bottom: 25px;
@@ -137,6 +173,8 @@
     font-size: 18px; margin-bottom: 20px;
     color: #fff; padding-bottom: 15px; border-bottom: 1px solid #2a2b30;
   }
+
+  /* Form */
   .form-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 15px;
@@ -158,6 +196,7 @@
   }
   .btn-primary:hover { background: #3b75d4; transform: translateY(-1px); }
 
+  /* Search & Table */
   .search-bar { margin-bottom: 18px; }
   .search-bar input {
     width: 100%; padding: 12px 16px; border: 1px solid #2a2b30;
@@ -183,6 +222,14 @@
   }
   .btn-delete:hover { background: #c0392b; }
   .empty { text-align: center; color: #6b6c72; padding: 30px; }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main-content { margin-left: 0; }
+    .toggle-btn.shifted { left: 20px; }
+  }
 </style>
 </head>
 <body>
@@ -198,7 +245,6 @@
     </div>
 
     <form id="authForm" onsubmit="return false;">
-      <!-- Signup Name (hidden by default) -->
       <div class="input-box" id="nameBox" style="display:none;">
         <input type="text" id="signupName" placeholder="Full name" autocomplete="name">
       </div>
@@ -214,7 +260,6 @@
         </svg>
       </div>
 
-      <!-- Confirm Password (hidden by default) -->
       <div class="input-box" id="confirmBox" style="display:none;">
         <input type="password" id="signupConfirm" placeholder="Confirm password">
       </div>
@@ -244,7 +289,11 @@
 
 <!-- ===== DASHBOARD ===== -->
 <div id="dashboardPage">
-  <aside class="sidebar">
+  <div class="overlay" id="overlay" onclick="closeSidebarMobile()"></div>
+
+  <button class="toggle-btn" id="sidebarToggle" onclick="toggleSidebar()" style="display:none;">☰</button>
+
+  <aside class="sidebar" id="sidebar">
     <h2>STYLE WISE <span>PART</span></h2>
     <nav>
       <a class="active" data-section="dashboard" onclick="showSection('dashboard')">📊 Dashboard</a>
@@ -257,7 +306,7 @@
     </div>
   </aside>
 
-  <main class="main-content">
+  <main class="main-content" id="mainContent">
     <!-- Dashboard -->
     <div id="section-dashboard">
       <div class="topbar">
@@ -290,7 +339,7 @@
           <input id="fQty" type="number" placeholder="Qty">
           <input id="fColor" placeholder="Color">
           <input id="fEmbroidery" placeholder="Embroidery">
-          <input id="fDelivery" type="date" placeholder="Delivery Date">
+          <input id="fDelivery" type="date">
           <input id="fPo" placeholder="PO No">
         </div>
         <button class="btn-primary" onclick="savePart()">Save Entry</button>
@@ -325,6 +374,7 @@
   let allParts = [];
   let currentUser = null;
   let isSignupMode = false;
+  let sidebarOpen = true;
 
   // ===== Password Show/Hide =====
   document.getElementById('togglePassword').addEventListener('click', () => {
@@ -343,7 +393,7 @@
     document.getElementById('message').className = '';
   });
 
-  // ===== Submit (Login or Signup) =====
+  // ===== Submit (Login / Signup) =====
   document.getElementById('authForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('email').value.trim();
@@ -415,12 +465,63 @@
     currentUser = null;
     document.getElementById('dashboardPage').style.display = 'none';
     document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('sidebarToggle').style.display = 'none';
   }
+
+  // ===== Sidebar Toggle =====
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const main = document.getElementById('mainContent');
+    const btn = document.getElementById('sidebarToggle');
+    const overlay = document.getElementById('overlay');
+
+    if (window.innerWidth <= 768) {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+    } else {
+      sidebarOpen = !sidebarOpen;
+      sidebar.classList.toggle('hidden', !sidebarOpen);
+      main.classList.toggle('full', !sidebarOpen);
+      btn.classList.toggle('shifted', sidebarOpen);
+    }
+  }
+
+  function closeSidebarMobile() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('active');
+  }
+
+  // স্ক্রিন রিসাইজ হ্যান্ডলার
+  window.addEventListener('resize', () => {
+    const sidebar = document.getElementById('sidebar');
+    const main = document.getElementById('mainContent');
+    const btn = document.getElementById('sidebarToggle');
+    const overlay = document.getElementById('overlay');
+
+    if (window.innerWidth <= 768) {
+      sidebar.classList.remove('hidden');
+      main.classList.remove('full');
+      btn.classList.remove('shifted');
+    } else {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      if (sidebarOpen) {
+        sidebar.classList.remove('hidden');
+        main.classList.remove('full');
+        btn.classList.add('shifted');
+      }
+    }
+  });
 
   // ===== Dashboard =====
   function showDashboard() {
     document.getElementById('loginPage').style.display = 'none';
     document.getElementById('dashboardPage').style.display = 'block';
+
+    const toggleBtn = document.getElementById('sidebarToggle');
+    toggleBtn.style.display = 'flex';
+    if (window.innerWidth > 768) toggleBtn.classList.add('shifted');
+
     const name = currentUser.user_metadata?.full_name || currentUser.email;
     document.getElementById('userEmail').textContent = name;
     document.getElementById('todayDate').textContent =
@@ -511,6 +612,9 @@
     document.querySelectorAll('.sidebar nav a').forEach(a => {
       a.classList.toggle('active', a.dataset.section === name);
     });
+
+    // মোবাইলে সেকশন ক্লিক করলে সাইডবার বন্ধ
+    if (window.innerWidth <= 768) closeSidebarMobile();
   }
 
   // ===== Session Check =====
