@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notifications - Style Wise Part</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="js/supabase-config.js"></script>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeSidebarMobile()"></div>
+<button class="toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+
+<aside class="sidebar" id="sidebar">
+  <h2>STYLE WISE <span>PART</span></h2>
+  <nav>
+    <a href="index.html">📊 Dashboard</a>
+    <a href="profile.html">👤 Profile</a>
+    <a href="messages.html">💬 Messages <span class="badge" id="msgBadge"></span></a>
+    <a href="notifications.html" class="active">🔔 Notifications <span class="badge" id="notifBadge"></span></a>
+  </nav>
+  <div class="user-info">
+    <div>👤 <span id="userEmail">—</span></div>
+    <button onclick="logout()">Log out</button>
+  </div>
+</aside>
+
+<main class="main-content" id="mainContent">
+  <div class="topbar">
+    <h1>Notifications</h1>
+    <button class="btn-primary" onclick="markAllRead()" style="margin:0; padding:10px 20px; font-size:13px;">Mark all as read</button>
+  </div>
+
+  <div id="notifList"></div>
+</main>
+
+<script src="js/auth-guard.js"></script>
+<script>
+  async function loadNotifications() {
+    const { data, error } = await supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
+
+    if (error) { console.error(error); return; }
+    const container = document.getElementById('notifList');
+
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div class="empty">No notifications yet</div>';
+      return;
+    }
+
+    container.innerHTML = data.map(n => `
+      <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="openNotif('${n.id}', '${n.link || ''}')">
+        <h4>${n.title || 'Notification'}</h4>
+        <p>${n.body || ''}</p>
+        <div class="time">${new Date(n.created_at).toLocaleString('en-US')}</div>
+      </div>
+    `).join('');
+  }
+
+  async function openNotif(id, link) {
+    await supabaseClient.from('notifications').update({ is_read: true }).eq('id', id);
+    if (link) window.location.href = link;
+    else loadNotifications();
+  }
+
+  async function markAllRead() {
+    await supabaseClient.from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', currentUser.id)
+      .eq('is_read', false);
+    loadNotifications();
+    loadUnreadBadges();
+  }
+
+  window.addEventListener('userLoaded', loadNotifications);
+</script>
+</body>
+</html>
