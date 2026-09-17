@@ -260,6 +260,56 @@ table tr:hover { background: #1f2025; }
 .notif-item p { color: #8e8f96; font-size: 13px; }
 .notif-item .time { color: #6b6c72; font-size: 11px; margin-top: 6px; }
 
+/* ===== ACTION BUTTONS (3 colors) ===== */
+.btn-pdf, .btn-edit, .btn-delete {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 5px;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+/* PDF - Orange */
+.btn-pdf {
+  background: #f39c12;
+  color: #fff;
+}
+.btn-pdf:hover {
+  background: #d68910;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(243, 156, 18, 0.4);
+}
+
+/* Edit - Blue */
+.btn-edit {
+  background: #4d8aea;
+  color: #fff;
+}
+.btn-edit:hover {
+  background: #3b75d4;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(77, 138, 234, 0.4);
+}
+
+/* Delete - Red */
+.btn-delete {
+  background: #e74c3c;
+  color: #fff;
+  margin-right: 0;
+}
+.btn-delete:hover {
+  background: #c0392b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); }
